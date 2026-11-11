@@ -1,7 +1,9 @@
+import { useContext } from 'react'
 import { Navigate } from 'react-router-dom'
+import { AuthContext } from '../context/AuthContext'
 
 const publicRoute = ({children}) => {
-    const user=null;
+    const {user}=useContext(AuthContext);
   return (
     <div>{user ? <Navigate to="/" />: children}</div>
   )

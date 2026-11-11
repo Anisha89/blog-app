@@ -1,24 +1,60 @@
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import  Heading  from "../components/Heading";
 import Post from "../components/Post";
 import PostDEtailModal from "../components/PostDEtailModal";
+import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import {AuthContext} from '../context/AuthContext';
 const Home = () => {
   const [selectedPost,setSelectedPost] =useState();
+  const [posts,setPosts]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const {user} =useContext(AuthContext);
+  const handleDelete =async(postID)=>{
+    try{
+       await deleteDoc(doc(db,"posts",postID));
+       setPosts(posts.filter((post)=>post.id!==postID));
+       setSelectedPost(null);
+    }
+       catch(error){
+      console.log(error);
+    } 
+  }
+ 
+  useEffect(()=>{
+    const fetchPost = async ()=>{
+      try{
+     const postRef =collection(db,"posts");
+     const postDocs=await getDocs(postRef);
+     const allPosts =postDocs.docs.map((doc)=>({
+       ...doc.data(),
+       id:doc.id,
+     }))
+     setPosts(allPosts);
+      }
+      catch(error){
+        console.log(error);
+      }
+      finally{
+     setLoading(false);
+      }
+    }
+    fetchPost();
+  },[])
   return (
     <div className="space-y-8">
     <Heading headingText={"Latest Posts"}
               text ="Discover interseting stories from our community"
               center={false}/>
-    {/*<div className="text-center py-20 text-slate-500">Loading Posts......</div>*/}
+            {loading ? <div className="text-center py-20 text-slate-500">Loading Posts......</div>:<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       {posts.map((post)=>(
+        <Post key ={post.id} title={post.title} description={post.description} onClick={()=>setSelectedPost(post)} />
+       ))}
+    </div>}  
+    {/**/}
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <Post title="Post-1" description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum Generator is a placeholder text commonly used in design and typesetting to fill spaces before final content is ready. "/>
-        <Post title="Post-1" description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum Generator is a placeholder text commonly used in design and typesetting to fill spaces before final content is ready. "/>
-          <Post title="Post-2" description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum Generator is a placeholder text commonly used in design and typesetting to fill spaces before final content is` ready. "/>
-            <Post title="Post-3
-            " description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum Generator is a placeholder text commonly used in design and typesetting to fill spaces before final content is ready. "/>
-    </div>
-    {selectedPost && <PostDEtailModal/>}
+    
+    {selectedPost && <PostDEtailModal post={selectedPost} onClose={()=>setSelectedPost(null)} onDelete={handleDelete} isOwner={user?.id === selectedPost.userId}/>}
     </div>
   )
 }

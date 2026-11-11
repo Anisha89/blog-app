@@ -10,6 +10,7 @@ import Profile from './pages/Profile';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import PublicRoute from './routes/PublicRoute';
 import ProctectedRoute from './routes/ProtectedRoute';
+import AuthProvider from './context/AuthContext';
 
 const router =createBrowserRouter([
     {path:"/", element:(<ProctectedRoute><Home/></ProctectedRoute>)},
@@ -22,6 +23,8 @@ const router =createBrowserRouter([
 ])
 createRoot(document.getElementById('root')).render(
   <StrictMode>
+    <AuthProvider>
    <RouterProvider router={router}/>
+   </AuthProvider>
   </StrictMode>,
 )

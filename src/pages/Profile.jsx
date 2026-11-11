@@ -1,7 +1,51 @@
 import { Mail, User } from "lucide-react"
 import Post from "../components/Post"
-
+import {AuthContext} from "../context/AuthContext"
+import { useContext, useEffect, useState } from "react"
+import { collection, deleteDoc, doc, getDoc, getDocs, query, where } from "firebase/firestore"
+import { db } from "../firebase"
+import PostDEtailModal from "../components/PostDEtailModal"
 const Profile = () => {
+  const {user} =useContext(AuthContext);
+  const [posts,setPosts]=useState([]);
+  const [loading,setLoading] =useState(true);
+  const [selectedPost,setSelectedPost] =useState(null);
+   const handleDelete =async(postID)=>{
+      try{
+         await deleteDoc(doc(db,"posts",postID));
+         setPosts(posts.filter((post)=>post.id!==postID));
+         setSelectedPost(null);
+      }
+         catch(error){
+        console.log(error);
+      } 
+    }
+  useEffect (()=>{
+    const fetchPost =async()=>{
+     try{
+      const postRef = collection(db,"posts");
+      const userPost = query(postRef,where("userId", "==",user?.id));
+      const postDocs = await getDocs(userPost);
+
+      const allPosts =postDocs.docs.map((doc)=>({
+          ...doc.data(),
+          id:doc.id,
+         
+
+      }));
+      setPosts(allPosts);
+      console.log(allPosts);
+
+     }
+     catch(error){
+      console.log(error);
+     }
+    finally{
+      setLoading(false);
+    }
+    }
+  fetchPost();
+  },[user]);
   return (
  
       <div className="space-y-8">
@@ -10,28 +54,33 @@ const Profile = () => {
              <User size={40} />
           </div>
         <div>
-        <h1 className="text-2xl font-bold text-slate-900 ">Tivin</h1>
-        <p className="text-slate-500 flex gap-2 "><Mail/> tivin@gmail.com</p>
+        <h1 className="text-2xl font-bold text-slate-900 ">{user?.username||"User"}</h1>
+        <p className="text-slate-500 flex gap-2 "><Mail/> {user?.email}</p>
        </div>
        
        
         </div>
         <div><h2 className="text-xl font-bold text-slate-900 ml-1">
-          My Posts(0)</h2>
+          My Posts({posts.length})</h2>
+{loading ? (<div className="text-center py-20 text-slate-500 "> Loading Posts...</div>):
+posts.length>0?(<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {posts.map((post)=>(
+        <Post key ={post.id} title={post.title} description={post.description} onClick={()=>setSelectedPost(post)} onDelete={handleDelete}/>
+      ))}
+    </div>):
 
-          {/*<div className="text-center py-20 text-slate-500 "> Loading Posts...</div>*/}
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <Post title="Post-1" description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum Generator is a placeholder text commonly used in design and typesetting to fill spaces before final content is ready. "/>
-        <Post title="Post-1" description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum Generator is a placeholder text commonly used in design and typesetting to fill spaces before final content is ready. "/>
-          <Post title="Post-2" description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum Generator is a placeholder text commonly used in design and typesetting to fill spaces before final content is` ready. "/>
-            <Post title="Post-3
-            " description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum Generator is a placeholder text commonly used in design and typesetting to fill spaces before final content is ready. "/>
-    </div>
 
-    <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 "><p className="text-xl text-slate-600">You have not posted anything yet</p>
-    <p className="text-slate-400">Create your first post to see it here</p></div>
+    (<div className="text-center py-20 bg-white rounded-2xl border border-slate-200 "><p className="text-xl text-slate-600">You have not posted anything yet</p>
+    <p className="text-slate-400">Create your first post to see it here</p></div>)}
+
+
+        
+           
+
 
           </div>
+          {selectedPost && <PostDEtailModal post={selectedPost} onClose={()=>setSelectedPost(null)} onDelete={handleDelete} isOwner={user?.id === selectedPost.userId}/>}
+    
       </div>
       
   )
